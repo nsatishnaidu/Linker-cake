@@ -1,33 +1,38 @@
-﻿///////////////////////////////////////////////////////////////////////////////
-// ARGUMENTS
-///////////////////////////////////////////////////////////////////////////////
+﻿var configuration = Argument("configuration", "Debug");
+var msbuildToolPath = Argument("msbuildToolPath", @"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\msbuild.exe");
 
-var target = Argument("target", "Default");
-var configuration = Argument("configuration", "Release");
+Task("Restore")
+	.Does(() => 
+	{
+		NuGetRestore("Linker-Cake.sln");
+	}
+	);
 
-///////////////////////////////////////////////////////////////////////////////
-// SETUP / TEARDOWN
-///////////////////////////////////////////////////////////////////////////////
 
-Setup(ctx =>
-{
-	// Executed BEFORE the first task.
-	Information("Running tasks...");
-});
+Task("Build")
+	.IsDependentOn("Restore")
+	.Does(() => 
+	{
+		//DotNetCoreBuild("Linker-Cake.sln",  new DotNetCoreBuildSettings {Configuration = configuration});
 
-Teardown(ctx =>
-{
-	// Executed AFTER the last task.
-	Information("Finished running tasks.");
-});
+		MSBuild("Linker-Cake.sln",
+            new MSBuildSettings {
+              ToolPath = msbuildToolPath,
+              Verbosity = Verbosity.Quiet ,
+              ToolVersion = MSBuildToolVersion.VS2019,
+              Configuration = configuration,
+              NodeReuse = false
+            }
+            .AddFileLogger(new MSBuildFileLogger
+                    {
+                        Verbosity = Verbosity.Verbose,
 
-///////////////////////////////////////////////////////////////////////////////
-// TASKS
-///////////////////////////////////////////////////////////////////////////////
+                    })
+            //.SetNoConsoleLogger(true)
+            .SetMaxCpuCount(0)
+            .WithTarget("Clean")
+            .WithTarget("Build"));
 
-Task("Default")
-.Does(() => {
-	Information("Hello Cake!");
-});
+	});
 
-RunTarget(target);
+RunTarget("Build");
